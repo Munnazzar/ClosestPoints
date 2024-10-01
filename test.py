@@ -1,14 +1,17 @@
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
+import math
+import time
 from OpenGL.GLU import *
 import csv
 import closest
+import sys
 
 
 def collect_points():
     points = []
-    with open('1_million_points.csv', mode='r') as file:
+    with open('1000_points.csv', mode='r') as file:
         csvFile = csv.reader(file)
         for lines in csvFile:
             x=float(lines[0])
@@ -19,6 +22,19 @@ def collect_points():
 
 # Function to draw the points in 3D space
 def draw_points(points):
+    if len(points)==2:
+        glBegin(GL_POINTS)
+        glColor3f(1.0, 1.0, 1.0)
+        for point in points:
+            glVertex3fv(point)
+        glEnd()
+        glBegin(GL_LINES)
+        glColor3f(1.0, 0.75, 0.8)
+        glVertex3fv(points[1])
+        glVertex3fv(points[0])
+        glEnd()
+        return
+    
     glBegin(GL_POINTS)
     glColor3f(1.0, 1.0, 1.0)  # Set point color to white
     for point in points:
@@ -70,6 +86,7 @@ def display(points):
     rotate_x, rotate_y = 0, 0
 
     while True:
+        flag = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -79,7 +96,7 @@ def display(points):
         keys = pygame.key.get_pressed()
 
         if keys[K_RETURN]:
-            points= closest.bruteforce3D(points)
+            flag = True
         # Rotation controls
         if keys[K_LEFT]:
             rotate_y -= 1
@@ -107,6 +124,36 @@ def display(points):
 
         # Draw the 3D axes
         draw_axes()
+        if flag:
+            p1Closest = {}
+            p2Closest = {}
+            distClosest = sys.maxsize
+            for i in points:
+                for j in points:
+                    if i==j:
+                        break
+                    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+                    draw_axes()
+                    draw_points(points)
+                    glBegin(GL_LINES)
+                    glColor3f(1.0, 1.0, 0) #yellow
+                    glVertex3f(i[0],i[1],i[2])
+                    glVertex3f(j[0],j[1],j[2])
+                    glEnd()
+                    pygame.display.flip()
+                    tempClosest = math.sqrt( abs((j[0]-i[0])**2 +  (j[1]-i[1])**2 + (j[2]-i[2])**2 ))
+                    if(tempClosest<distClosest):
+                        distClosest=tempClosest
+                        p1Closest=i
+                        p2Closest=j
+                        
+            points=[]
+            points.append((p1Closest))
+            points.append((p2Closest))
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            draw_axes()
+                        
+        
         draw_points(points)
         
         glPopMatrix()
